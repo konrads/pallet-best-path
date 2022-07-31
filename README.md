@@ -54,7 +54,7 @@ This pallet comprises following structure:
 
 For longest path calculations, Floyd-Warshall algorithm was chosen for its ability to calculate shortest/longest paths across all vertices.
 
-For multiplication based weights, it's been noticed that product maximisation is equivalent to maximisation of log of weights, as per: `x*y = 2^(log2(x) + log2(y))`.
+For multiplication based weights, it's been noticed that product maximisation is equivalent to maximisation of log of weights, as per: $x*y = 2^{log2(x) + log2(y)}$.
 
 For longest paths, weights have been multiplied by `-1` and hence reused in shortest path algorithm.
 

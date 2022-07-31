@@ -1,0 +1,54 @@
+[package]
+name = "pallet-best-path"
+version = "0.1.0"
+authors = ['Konrad Sosnowski <sosnowski.konrad@gmail.com>']
+edition = "2021"
+license = "Unlicense"
+homepage = 'https://github.com/konrads/pallet-scheduler-datetime'
+repository = 'https://github.com/konrads/pallet-scheduler-datetime'
+description = "Pallet for calculating best trade paths"
+readme = "README.md"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec =         { package = 'parity-scale-codec', version = '3.0.0', default-features = false, features = ['derive', 'max-encoded-len'] }
+scale-info =    { version = '2.1.1', default-features = false, features = ['derive'] }
+log =           { version = '0.4.17', default-features = false }
+frame-support = { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', version = '4.0.0-dev', default-features = false }
+frame-system =  { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', version = '4.0.0-dev', default-features = false }
+sp-core =       { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', version = '6.0.0',     default-features = false }
+sp-io =         { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', version = '6.0.0',     default-features = false }
+sp-keystore =   { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', version = '0.12.0',    optional = true }
+sp-runtime =    { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', version = '6.0.0',     default-features = false }
+sp-std =        { git = 'https://github.com/paritytech/substrate.git', branch = 'polkadot-v0.9.24', version = '4.0.0-dev', default-features = false }
+lite-json =     { version = "0.2", default-features = false }
+parking_lot =   { version = "0.12.1" }
+num-traits =    { version = "0.2.14", default-features = false, features = ["libm"] }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate.git", version = "4.0.0-dev", default-features = false, optional = true }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"scale-info/std",
+	"frame-support/std",
+	"frame-system/std",
+	"lite-json/std",
+	"sp-core/std",
+	"sp-io/std",
+	"sp-keystore",
+	"sp-runtime/std",
+	"sp-std/std",
+	"log/std",
+	"frame-benchmarking/std",
+	"frame-system/std",
+	"frame-support/std",
+]
+runtime-benchmarks = [
+	'frame-benchmarking',
+	'frame-support/runtime-benchmarks',
+	'frame-system/runtime-benchmarks',
+]
+try-runtime = ["frame-support/try-runtime"]

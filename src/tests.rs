@@ -29,8 +29,8 @@ fn test_submit_monitored_pairs_ok() {
 				ProviderPair{pair: Pair{source: BTC_CURRENCY.to_vec(), target: USDT_CURRENCY.to_vec()}, provider: MOCK_PROVIDER},
 				ProviderPair{pair: Pair{source: BTC_CURRENCY.to_vec(), target: ETH_CURRENCY.to_vec()},  provider: MOCK_PROVIDER},
 				ProviderPair{pair: Pair{source: ETH_CURRENCY.to_vec(), target: USDT_CURRENCY.to_vec()}, provider: MOCK_PROVIDER},
-			].into_iter().collect::<BTreeSet<ProviderPair<Vec<u8>>>>(),
-			MonitoredPairs::<Test>::iter_keys().collect::<BTreeSet<ProviderPair<Vec<u8>>>>()
+			].into_iter().collect::<BTreeSet<ProviderPair<Vec<u8>, PriceProviderId>>>(),
+			MonitoredPairs::<Test>::iter_keys().collect::<BTreeSet<ProviderPair<Vec<u8>, PriceProviderId>>>()
 		);
 		assert_eq!(last_event(), Some(Event::Fixture(crate::Event::<Test>::MonitoredPairsSubmitted(vec![
 			(BTC_CURRENCY.to_vec(), USDT_CURRENCY.to_vec(), MOCK_PROVIDER, Operation::Add),
@@ -49,7 +49,7 @@ fn test_submit_monitored_pairs_ok() {
 		assert_eq!(vec![
 				ProviderPair{pair: Pair{source: ETH_CURRENCY.to_vec(), target: USDT_CURRENCY.to_vec()}, provider: MOCK_PROVIDER},
 			],
-			MonitoredPairs::<Test>::iter_keys().collect::<Vec<ProviderPair<Vec<u8>>>>()
+			MonitoredPairs::<Test>::iter_keys().collect::<Vec<ProviderPair<Vec<u8>, PriceProviderId>>>()
 		);
 		assert_eq!(last_event(), Some(Event::Fixture(crate::Event::<Test>::MonitoredPairsSubmitted(vec![
 			(BTC_CURRENCY.to_vec(), USDT_CURRENCY.to_vec(), MOCK_PROVIDER, Operation::Del),
@@ -65,7 +65,7 @@ fn test_submit_monitored_pairs_ok() {
 		assert_eq!(vec![
 				ProviderPair{pair: Pair{source: USDT_CURRENCY.to_vec(), target: ETH_CURRENCY.to_vec()}, provider: MOCK_PROVIDER},
 			],
-			MonitoredPairs::<Test>::iter_keys().collect::<Vec<ProviderPair<Vec<u8>>>>()
+			MonitoredPairs::<Test>::iter_keys().collect::<Vec<ProviderPair<Vec<u8>, PriceProviderId>>>()
 		);
 		assert_eq!(last_event(), Some(Event::Fixture(crate::Event::<Test>::MonitoredPairsSubmitted(vec![
 			(ETH_CURRENCY.to_vec(),  USDT_CURRENCY.to_vec(), MOCK_PROVIDER, Operation::Del),
@@ -108,6 +108,7 @@ fn test_ocw_submit_best_paths_changes() {
 				<Test as frame_system::Config>::BlockNumber,
 				<Test as Config>::Currency,
 				<Test as Config>::Amount,
+				<Test as Config>::Provider,
 			> as SignedPayload<Test>>::sign::<crypto::TestAuthId>(&payload).unwrap();
 		assert_ok!(Fixture::ocw_submit_best_paths_changes(Origin::none(), payload.clone(), signature.clone()));
 		assert_noop!(Fixture::ocw_submit_best_paths_changes(Origin::none(), payload, signature), Error::<Test>::StaleUnsignedTxError);
@@ -122,6 +123,7 @@ fn test_ocw_submit_best_paths_changes() {
 				<Test as frame_system::Config>::BlockNumber,
 				<Test as Config>::Currency,
 				<Test as Config>::Amount,
+				<Test as Config>::Provider,
 			> as SignedPayload<Test>>::sign::<crypto::TestAuthId>(&payload2).unwrap();
 		assert_noop!(Fixture::ocw_submit_best_paths_changes(Origin::root(), payload2, signature), BadOrigin);
 	});
@@ -161,6 +163,7 @@ fn test_fetch_prices_and_update_best_paths() {
 					<Test as frame_system::Config>::BlockNumber,
 					<Test as Config>::Currency,
 					<Test as Config>::Amount,
+					<Test as Config>::Provider,
 				> as SignedPayload<Test>>::verify::<crypto::TestAuthId>(&payload, signature);
 
 			assert!(signature_valid);

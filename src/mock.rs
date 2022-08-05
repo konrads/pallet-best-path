@@ -20,18 +20,18 @@ use core::convert::TryFrom;
 use sp_std::vec::Vec;
 use std::sync::Arc;
 
-pub(crate) const MOCK_PROVIDER: Provider = Provider::CRYPTOCOMPARE;
+pub(crate) const MOCK_PROVIDER: PriceProviderId = PriceProviderId::CRYPTOCOMPARE;
 pub(crate) const BTC_CURRENCY: &[u8] = b"BTC";
 pub(crate) const ETH_CURRENCY: &[u8] = b"ETH";
 pub(crate) const USDT_CURRENCY: &[u8] = b"USDT";
 pub(crate) const BOGUS_CURRENCY: &[u8] = b"__BOGUS_CURRENCY__";
 pub struct MockProvider {}
-impl PriceOracle<u64> for MockProvider {
+impl PriceProvider<u64, PriceProviderId> for MockProvider {
     fn get_price<C: AsRef<[u8]>>(
-        _provider: &Provider,
+        _provider: &PriceProviderId,
         _source: C,
         _target: C,
-    ) -> Result<u64, PriceOracleErr> {
+    ) -> Result<u64, PriceProviderErr> {
         Ok(50_000)
     }
 }
@@ -130,8 +130,9 @@ impl Config for Test {
     type UnsignedPriority = UnsignedPriority;
     type PriceChangeTolerance = PriceChangeTolerance;
     type BestPathCalculator = best_path_calculator::noop_calculator::NoBestPathCalculator;
-    type PriceOracle = MockProvider;
+    type PriceProvider = MockProvider;
     type Currency = Vec<u8>;
+    type Provider = PriceProviderId;
     type Amount = u64;
     type WeightInfo = ();
 }

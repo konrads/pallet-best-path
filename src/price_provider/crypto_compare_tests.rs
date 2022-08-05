@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use crate::price_oracle::crypto_compare::get_price;
+use crate::price_provider::crypto_compare::get_price;
 use sp_core::offchain::{testing, OffchainWorkerExt};
 
 #[test]

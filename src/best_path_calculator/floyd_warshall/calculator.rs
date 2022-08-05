@@ -16,9 +16,9 @@ impl From<algo::PathCalculationError> for CalculatorError {
 const PRECISION: f64 = 1_000_000_000_000.0;
 
 pub struct FloydWarshallCalculator {}
-impl<C: Currency, A: Amount> BestPathCalculator<C, A> for FloydWarshallCalculator {
+impl<C: Currency + Conversions + AsRef<[u8]>, A: Amount, P: Provider> BestPathCalculator<C, A, P> for FloydWarshallCalculator {
     /// Wraps Floyd-Warshall's algorithm that uses indexes from/into BestPathCalculator data structures
-	fn calc_best_paths(pairs_and_prices: &[(ProviderPair<C>, A)]) -> Result<BTreeMap<Pair<C>, PricePath<C, A>>, CalculatorError> {
+	fn calc_best_paths(pairs_and_prices: &[(ProviderPair<C, P>, A)]) -> Result<BTreeMap<Pair<C>, PricePath<C, A, P>>, CalculatorError> {
         // get unique and indexed currencies and providers
         let currencies = pairs_and_prices.iter().flat_map(|(ProviderPair { pair: Pair{source, target}, .. }, ..)| vec![source, target].into_iter())
             .collect::<BTreeSet<_>>().into_iter().collect::<Vec<_>>();
@@ -58,8 +58,9 @@ impl<C: Currency, A: Amount> BestPathCalculator<C, A> for FloydWarshallCalculato
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::PriceProviderId;
 
-    const MOCK_PROVIDER: Provider = Provider::CRYPTOCOMPARE;
+    const MOCK_PROVIDER: PriceProviderId = PriceProviderId::CRYPTOCOMPARE;
 
     #[test]
     fn test_real_life_graph() {
@@ -102,8 +103,8 @@ mod tests {
                     String::from_utf8(target).unwrap(),
                     provider,
                     cost as f64 / PRECISION,
-                )).collect::<Vec<(String, String, Provider, f64)>>())
-            ).collect::<Vec<(String, String, f64, Vec<(String, String, Provider, f64)>)>>();
+                )).collect::<Vec<(String, String, PriceProviderId, f64)>>())
+            ).collect::<Vec<(String, String, f64, Vec<(String, String, PriceProviderId, f64)>)>>();
         assert_eq!(
             vec![
                 ("BNB".to_owned(), "BNB".to_owned(), 1.0,                vec![]),

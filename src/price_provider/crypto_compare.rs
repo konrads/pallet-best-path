@@ -1,9 +1,9 @@
 use sp_std::{vec::Vec, str};
 use crate::utils::{concat4, parse_price};
-use crate::PriceOracleErr;
+use crate::PriceProviderErr;
 use sp_runtime::offchain::{http, Duration};
 
-pub fn get_price(source: &[u8], target: &[u8], scale: u32) -> Result<u128, PriceOracleErr> {
+pub fn get_price(source: &[u8], target: &[u8], scale: u32) -> Result<u128, PriceProviderErr> {
 	let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));  // expiry = 2s
 	let url_bin = concat4(b"https://min-api.cryptocompare.com/data/price?fsym=", source, b"&tsyms=", target);
 	let url = str::from_utf8(&url_bin).map_err(|err| {

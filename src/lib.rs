@@ -1,8 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::type_complexity)]
 
-use codec::{Decode, Encode};
-use frame_support::{traits::Get, transactional};
+use core::fmt::Debug;
+use codec::{Decode, Encode, FullCodec};
+use frame_support::{traits::Get, traits::tokens::Balance, transactional};
 use frame_system::{
 	self,
 	offchain::{AppCrypto, CreateSignedTransaction, SendUnsignedTransaction, SignedPayload, Signer, SigningTypes},
@@ -14,16 +15,23 @@ use sp_runtime::{
 	transaction_validity::{InvalidTransaction, TransactionValidity, ValidTransaction},
 	RuntimeDebug,
 };
-use sp_std::{collections::btree_map::BTreeMap, collections::btree_set::BTreeSet, vec::Vec, str, prelude::*};
+use sp_std::{
+	collections::btree_map::BTreeMap,
+	collections::btree_set::BTreeSet,
+	convert::TryInto,
+	iter::Iterator,
+	vec::Vec,
+	str,
+	prelude::*
+};
 mod types;
 use types::*;
 mod utils;
 use utils::*;
 pub mod heap;
-pub mod price_oracle;
+pub mod price_provider;
 pub mod best_path_calculator;
-use sp_std::{convert::TryInto, iter::Iterator};
-use scale_info::prelude::{string::String, format};
+use scale_info::{prelude::{string::String, format}, TypeInfo};
 
 #[cfg(test)]
 mod mock;
@@ -51,39 +59,46 @@ pub const OCW_WORKER_LOCK: &[u8] = b"best_path::ocw_lock";
 /// Key for the next offchain trigger.
 pub const NEXT_OFFCHAIN_TRIGGER_BLOCK: &[u8] = b"best_path::next_offchain_trigger_block";
 
-pub trait BestPathCalculator<C: Currency, A: Amount> {
-	fn calc_best_paths(pairs_and_prices: &[(ProviderPair<C>, A)]) -> Result<BTreeMap<Pair<C>, PricePath<C, A>>, CalculatorError>;
+/// Available Price Providers
+#[derive(Clone, Eq, PartialEq, Encode, Decode, RuntimeDebug, TypeInfo, Ord, PartialOrd)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum PriceProviderId {
+    CRYPTOCOMPARE
+}
+
+pub trait BestPathCalculator<C: Currency + Conversions + AsRef<[u8]>, A: Amount, P: Provider> {
+	fn calc_best_paths(pairs_and_prices: &[(ProviderPair<C, P>, A)]) -> Result<BTreeMap<Pair<C>, PricePath<C, A, P>>, CalculatorError>;
 }
 
 /// Implementor of price fetching mechanism, per provider
-pub trait PriceOracle<A: Amount> {
+pub trait PriceProvider<A: Amount, P: Eq> {
 	/// For a given provider, source & target currency, fetch the pair price
-	fn get_price<C: AsRef<[u8]>>(provider: &Provider, source: C, target: C) -> Result<A, PriceOracleErr>;
+	fn get_price<C: AsRef<[u8]>>(provider: &P, source: C, target: C) -> Result<A, PriceProviderErr>;
 }
 
 #[derive(Debug)]
-pub enum PriceOracleErr {
+pub enum PriceProviderErr {
 	TransportErr(http::Error),
 }
 
-impl From<http::Error> for PriceOracleErr {
+impl From<http::Error> for PriceProviderErr {
     fn from(err: http::Error) -> Self {
-        PriceOracleErr::TransportErr(err)
+        PriceProviderErr::TransportErr(err)
     }
 }
 
-/// Signed payload of unsigned transaction that carries best path changes, nonce and publick key.
+/// Signed payload of unsigned transaction that carries best path changes, nonce and public key.
 ///
 /// Changes map source/target currency to an Option of a best path. If the Option is Some(), price update is requested, if None, removal.
-#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, scale_info::TypeInfo)]
-pub struct BestPathChangesPayload<Public, BlockNumber, C: Currency, A: Amount> {
-	changes: Vec<(C, C, Option<PricePath<C, A>>)>,
+#[derive(Encode, Decode, Clone, PartialEq, Eq, TypeInfo, RuntimeDebug)]
+pub struct BestPathChangesPayload<Public, BlockNumber, C: Currency, A: Amount, P: Provider> {
+	changes: Vec<(C, C, Option<PricePath<C, A, P>>)>,
 	nonce: u64,
 	block_number: BlockNumber,
 	public: Public,
 }
 
-impl<T: SigningTypes, C: Currency, A: Amount> SignedPayload<T> for BestPathChangesPayload<T::Public, T::BlockNumber, C, A> {
+impl<T: SigningTypes, C: Currency + Encode, A: Amount + Encode, P: Provider + Encode> SignedPayload<T> for BestPathChangesPayload<T::Public, T::BlockNumber, C, A, P> {
 	fn public(&self) -> T::Public {
 		self.public.clone()
 	}
@@ -125,11 +140,11 @@ pub mod pallet {
 
 	/// DoubleMap of trading path by source & target currencies
 	#[pallet::storage]
-	pub(super) type BestPaths<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::Currency /* source currency */, Blake2_128Concat, T::Currency /*target currency */, PricePath<T::Currency, T::Amount> /* best path */>;
+	pub(super) type BestPaths<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::Currency /* source currency */, Blake2_128Concat, T::Currency /*target currency */, PricePath<T::Currency, T::Amount, T::Provider> /* best path */>;
 
 	/// Map to keep track of source & target currencies we wish to monitor
 	#[pallet::storage]
-	pub(super) type MonitoredPairs<T: Config> = StorageMap<_, Blake2_128Concat, ProviderPair<T::Currency>, (), OptionQuery>;  // membership in the map indicates price is to be fetched, Some(()) - existence of the latest price
+	pub(super) type MonitoredPairs<T: Config> = StorageMap<_, Blake2_128Concat, ProviderPair<T::Currency, T::Provider>, (), OptionQuery>;  // membership in the map indicates price is to be fetched, Some(()) - existence of the latest price
 
 	/// Map storing whitelisted accounts that are whitelisted to sign the payload of unsigned transactions.
 	#[pallet::storage]
@@ -148,7 +163,7 @@ pub mod pallet {
 
 		/// Addition of a monitored currency/provider pair.
 		/// \[source_currency, target_currency, provider, operation\]
-		MonitoredPairsSubmitted(Vec<(T::Currency, T::Currency, Provider, Operation)>),
+		MonitoredPairsSubmitted(Vec<(T::Currency, T::Currency, T::Provider, Operation)>),
 
 		/// Addition of offchain authority account.
 		/// \[account_id\]
@@ -159,8 +174,6 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Indicates currency/provider pair not found
 		PricePairNotFoundError,
-		/// Indicates provider is not catered for
-		UnknownPriceOracleError,
 		/// Indicates stale unsigned transaction, possibly due to replay attack
 		StaleUnsignedTxError,
 	}
@@ -178,16 +191,19 @@ pub mod pallet {
 		type Call: From<Call<Self>>;
 
 		/// Currency type
-		type Currency: Currency;
+		type Currency: Currency + Conversions + AsRef<[u8]> + FullCodec + TypeInfo + Debug;
+
+		/// Currency type
+		type Provider: Provider + FullCodec + TypeInfo + Debug;
 
 		/// Type indicating amounts: price, cost, balance
-		type Amount: Amount;
+		type Amount: Balance;
 
 		/// Dynamic implementation of the best path calculator
-		type BestPathCalculator: BestPathCalculator<Self::Currency, Self::Amount>;
+		type BestPathCalculator: BestPathCalculator<Self::Currency, Self::Amount, Self::Provider>;
 
 		/// Dynamic implementation of the price oracle
-		type PriceOracle: PriceOracle<Self::Amount>;
+		type PriceProvider: PriceProvider<Self::Amount, Self::Provider>;
 
 		/// Benchmarking weight type
 		type WeightInfo: WeightInfo;
@@ -257,7 +273,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn ocw_submit_best_paths_changes(
 			origin: OriginFor<T>,
-			best_path_change_payload: BestPathChangesPayload<T::Public, T::BlockNumber, T::Currency, T::Amount>,
+			best_path_change_payload: BestPathChangesPayload<T::Public, T::BlockNumber, T::Currency, T::Amount, T::Provider>,
 			_signature: T::Signature,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
@@ -303,7 +319,7 @@ pub mod pallet {
 		#[transactional]
 		pub fn submit_monitored_pairs(
 			origin: OriginFor<T>,
-			operations: Vec<ProviderPairOperation<T::Currency>>) -> DispatchResult {
+			operations: Vec<ProviderPairOperation<T::Currency, T::Provider>>) -> DispatchResult {
 			ensure_root(origin)?;
 
 			// dedupe operations, keep latest per provider_pair, preserving order
@@ -429,7 +445,7 @@ impl<T: Config> Pallet<T> {
 	fn fetch_prices_and_update_best_paths(block_number: T::BlockNumber) -> Result<(), String> {
 		let fetched_pairs = <MonitoredPairs<T>>::iter_keys()
 			.filter_map(|pp| {
-				T::PriceOracle::get_price(&pp.provider, &pp.pair.source, &pp.pair.target).ok().map(move |res| (pp, res))
+				T::PriceProvider::get_price(&pp.provider, &pp.pair.source, &pp.pair.target).ok().map(move |res| (pp, res))
 			})
 			.collect::<Vec<(_, _)>>();
 
@@ -438,7 +454,7 @@ impl<T: Config> Pallet<T> {
 			return Ok(())
 		}
 
-		let new_best_paths: BTreeMap<Pair<_>, PricePath<_, _>> = T::BestPathCalculator::calc_best_paths(&fetched_pairs).map_err(|e| format!("Failed to calculate best prices due to {:?}", e))?;
+		let new_best_paths: BTreeMap<Pair<_>, PricePath<_, _, _>> = T::BestPathCalculator::calc_best_paths(&fetched_pairs).map_err(|e| format!("Failed to calculate best prices due to {:?}", e))?;
 
 		// select the best path differences
 		// - elements changed at all and outside of acceptable tolerance

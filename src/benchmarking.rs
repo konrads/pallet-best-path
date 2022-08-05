@@ -1,37 +1,37 @@
 use super::*;
 
 #[allow(unused)]
-use crate::Pallet as BestPath;
+use crate::{Pallet as BestPath, PriceProviderId};
 use frame_benchmarking::benchmarks;
 use frame_system::RawOrigin;
 
-const TEST_PROVIDER: Provider = Provider::CRYPTOCOMPARE;
+const MOCK_PROVIDER_ID: PriceProviderId = PriceProviderId::CRYPTOCOMPARE;
 
 benchmarks! {
 	add_price_pair_nonexisting {
 		let source = T::Currency::from_vecu8(b"BTC".to_vec());
 		let target = T::Currency::from_vecu8(b"ETH".to_vec());
-	}: add_price_pair(RawOrigin::Root, source.clone(), target.clone(), TEST_PROVIDER) 
+	}: add_price_pair(RawOrigin::Root, source.clone(), target.clone(), MOCK_PROVIDER_ID) 
 	verify {
-		assert!(MonitoredPairs::<T>::contains_key(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: TEST_PROVIDER}));
+		assert!(MonitoredPairs::<T>::contains_key(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: MOCK_PROVIDER_ID}));
 	}
 
 	add_price_pair_existing {
 		let source = T::Currency::from_vecu8(b"ACA".to_vec());
 		let target = T::Currency::from_vecu8(b"KAR".to_vec());
-		MonitoredPairs::<T>::insert(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: TEST_PROVIDER }, ());
-	}: add_price_pair(RawOrigin::Root, source.clone(), target.clone(), TEST_PROVIDER)
+		MonitoredPairs::<T>::insert(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: MOCK_PROVIDER_ID }, ());
+	}: add_price_pair(RawOrigin::Root, source.clone(), target.clone(), MOCK_PROVIDER_ID)
 	verify {
-		assert!(MonitoredPairs::<T>::contains_key(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: TEST_PROVIDER}));
+		assert!(MonitoredPairs::<T>::contains_key(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: MOCK_PROVIDER_ID}));
 	}
 
 	delete_price_pair {
 		let source = T::Currency::from_vecu8(b"ACA".to_vec());
 		let target = T::Currency::from_vecu8(b"KAR".to_vec());
-		MonitoredPairs::<T>::insert(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: TEST_PROVIDER }, ());
-	}: _(RawOrigin::Root, source.clone(), target.clone(), TEST_PROVIDER)
+		MonitoredPairs::<T>::insert(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: MOCK_PROVIDER_ID }, ());
+	}: _(RawOrigin::Root, source.clone(), target.clone(), MOCK_PROVIDER_ID)
 	verify {
-		assert!(! MonitoredPairs::<T>::contains_key(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: TEST_PROVIDER}));
+		assert!(! MonitoredPairs::<T>::contains_key(ProviderPair{ pair: Pair{ source: source.clone(), target: target.clone() }, provider: MOCK_PROVIDER_ID}));
 	}
 
 	submit_price_pairs {
@@ -45,11 +45,11 @@ benchmarks! {
 			pairs.push((
 				source.clone(),
 				target.clone(),
-				TEST_PROVIDER,
+				MOCK_PROVIDER_ID,
 				op.clone(),
 			));
 			if op == Operation::Del {
-				MonitoredPairs::<T>::insert(ProviderPair{ pair: Pair{ source, target }, provider: TEST_PROVIDER }, ());
+				MonitoredPairs::<T>::insert(ProviderPair{ pair: Pair{ source, target }, provider: MOCK_PROVIDER_ID }, ());
 			}
 		}
 	}: submit_price_pairs(RawOrigin::Root, pairs)
@@ -64,10 +64,10 @@ benchmarks! {
 		// }
 		// let signature = ();
 		// FIXME... complete!
-	}: add_price_pair(RawOrigin::Root, T::Currency::from_vecu8(b"ACA".to_vec()), T::Currency::from_vecu8(b"KAR".to_vec()), TEST_PROVIDER)
+	}: add_price_pair(RawOrigin::Root, T::Currency::from_vecu8(b"ACA".to_vec()), T::Currency::from_vecu8(b"KAR".to_vec()), MOCK_PROVIDER_ID)
 
 	add_offchain_authority {
-	}: add_price_pair(RawOrigin::Root, T::Currency::from_vecu8(b"ACA".to_vec()), T::Currency::from_vecu8(b"KAR".to_vec()), TEST_PROVIDER)
+	}: add_price_pair(RawOrigin::Root, T::Currency::from_vecu8(b"ACA".to_vec()), T::Currency::from_vecu8(b"KAR".to_vec()), MOCK_PROVIDER_ID)
 
 	impl_benchmark_test_suite!(BestPath, crate::mock::new_test_ext(), crate::mock::Test);
 }

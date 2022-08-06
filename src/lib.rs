@@ -25,13 +25,13 @@ use sp_std::{
 	str,
 	prelude::*
 };
-mod types;
+pub mod types;
 use types::*;
 mod utils;
 use utils::*;
-mod traits;
+pub mod traits;
 use traits::{BestPath as BestPathTrait};
-use best_path::{BestPathCalculator, prelude::*};
+pub use best_path::{BestPathCalculator, prelude::*};
 pub mod heap;
 pub mod price_provider;
 use scale_info::{prelude::{string::String, format}, TypeInfo};
@@ -112,7 +112,6 @@ pub mod crypto {
 		MultiSignature, MultiSigner,
 	};
     use core::convert::TryFrom;
-	use scale_info::prelude::{string::String, format};
 	app_crypto!(sr25519, KEY_TYPE);
 
 	pub struct AuthId;

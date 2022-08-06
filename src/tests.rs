@@ -109,7 +109,7 @@ fn test_ocw_submit_best_paths_changes() {
 				<Test as Config>::Currency,
 				<Test as Config>::Amount,
 				<Test as Config>::Provider,
-			> as SignedPayload<Test>>::sign::<crypto::TestAuthId>(&payload).unwrap();
+			> as SignedPayload<Test>>::sign::<crypto::AuthId>(&payload).unwrap();
 		assert_ok!(Fixture::ocw_submit_best_paths_changes(Origin::none(), payload.clone(), signature.clone()));
 		assert_noop!(Fixture::ocw_submit_best_paths_changes(Origin::none(), payload, signature), Error::<Test>::StaleUnsignedTxError);
 	});
@@ -124,7 +124,7 @@ fn test_ocw_submit_best_paths_changes() {
 				<Test as Config>::Currency,
 				<Test as Config>::Amount,
 				<Test as Config>::Provider,
-			> as SignedPayload<Test>>::sign::<crypto::TestAuthId>(&payload2).unwrap();
+			> as SignedPayload<Test>>::sign::<crypto::AuthId>(&payload2).unwrap();
 		assert_noop!(Fixture::ocw_submit_best_paths_changes(Origin::root(), payload2, signature), BadOrigin);
 	});
 }
@@ -164,7 +164,7 @@ fn test_fetch_prices_and_update_best_paths() {
 					<Test as Config>::Currency,
 					<Test as Config>::Amount,
 					<Test as Config>::Provider,
-				> as SignedPayload<Test>>::verify::<crypto::TestAuthId>(&payload, signature);
+				> as SignedPayload<Test>>::verify::<crypto::AuthId>(&payload, signature);
 
 			assert!(signature_valid);
 		}

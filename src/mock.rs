@@ -122,7 +122,7 @@ parameter_types! {
 
 impl Config for Test {
     type Event = Event;
-    type AuthorityId = crypto::TestAuthId;
+    type AuthorityId = crypto::AuthId;
     type Call = Call;
     // BestPath specific
     type OffchainTriggerDelay = OffchainTriggerDelay;

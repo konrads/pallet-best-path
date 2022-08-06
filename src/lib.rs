@@ -3,7 +3,7 @@
 
 use core::fmt::Debug;
 use codec::{Decode, Encode, FullCodec};
-use frame_support::{traits::Get, traits::tokens::Balance, transactional};
+use frame_support::{pallet_prelude::*, traits::Get, traits::tokens::Balance, transactional};
 use frame_system::{
 	self,
 	offchain::{AppCrypto, CreateSignedTransaction, SendUnsignedTransaction, SignedPayload, Signer, SigningTypes},
@@ -28,9 +28,11 @@ mod types;
 use types::*;
 mod utils;
 use utils::*;
+mod traits;
+use traits::{BestPath as BestPathTrait};
+use best_path::{BestPathCalculator, prelude::*};
 pub mod heap;
 pub mod price_provider;
-pub mod best_path_calculator;
 use scale_info::{prelude::{string::String, format}, TypeInfo};
 
 #[cfg(test)]
@@ -64,10 +66,6 @@ pub const NEXT_OFFCHAIN_TRIGGER_BLOCK: &[u8] = b"best_path::next_offchain_trigge
 #[allow(clippy::upper_case_acronyms)]
 pub enum PriceProviderId {
     CRYPTOCOMPARE
-}
-
-pub trait BestPathCalculator<C: Currency + Conversions + AsRef<[u8]>, A: Amount, P: Provider> {
-	fn calc_best_paths(pairs_and_prices: &[(ProviderPair<C, P>, A)]) -> Result<BTreeMap<Pair<C>, PricePath<C, A, P>>, CalculatorError>;
 }
 
 /// Implementor of price fetching mechanism, per provider
@@ -135,7 +133,6 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 
 	/// DoubleMap of trading path by source & target currencies
@@ -308,7 +305,7 @@ pub mod pallet {
 				Self::deposit_event(Event::BestPricesSubmitted(event_payload));
 			}
 			Ok(Pays::No.into())
-	}
+	    }
 
 		/// Submit monitored price pair adds/deletes.
 		///
@@ -321,40 +318,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			operations: Vec<ProviderPairOperation<T::Currency, T::Provider>>) -> DispatchResult {
 			ensure_root(origin)?;
-
-			// dedupe operations, keep latest per provider_pair, preserving order
-			let mut operations2 = vec![];
-			let mut uniques = BTreeSet::new();
-			for op in operations.into_iter().rev() {
-				if uniques.insert(op.provider_pair.clone()) {
-					operations2.push(op);
-				}
-			}
-			let operations = operations2.into_iter().rev();
-
-			// add/delete monitored pairs
-			let mut event_payload = vec![];
-			for ProviderPairOperation{provider_pair, operation} in operations {
-				<MonitoredPairs<T>>::mutate_exists(provider_pair.clone(), |exists_indicator| {
-					let ProviderPair { pair: Pair { source, target }, provider } = provider_pair;
-					match operation {
-						Operation::Add => if exists_indicator.is_none() {
-							*exists_indicator = Some(());
-							event_payload.push((source, target, provider, operation));
-						},
-						Operation::Del => {
-							if exists_indicator.take().is_some() {
-								event_payload.push((source, target, provider, operation));
-							}
-						},
-					}
-				});
-			}
-
-			// only issue event if mods were made
-			if !event_payload.is_empty() {
-				Self::deposit_event(Event::MonitoredPairsSubmitted(event_payload));
-			}
+			Self::do_submit_monitored_pairs(operations);
 			Ok(())
 		}
 
@@ -419,6 +383,42 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
+	pub fn do_submit_monitored_pairs(operations: Vec<ProviderPairOperation<T::Currency, T::Provider>>) {
+		// dedupe operations, keep latest per provider_pair, preserving order
+		let mut operations2 = vec![];
+		let mut uniques = BTreeSet::new();
+		for op in operations.into_iter().rev() {
+			if uniques.insert(op.provider_pair.clone()) {
+				operations2.push(op);
+			}
+		}
+		let operations = operations2.into_iter().rev();
+
+		// add/delete monitored pairs
+		let mut event_payload = vec![];
+		for ProviderPairOperation{provider_pair, operation} in operations {
+			<MonitoredPairs<T>>::mutate_exists(provider_pair.clone(), |exists_indicator| {
+				let ProviderPair { pair: Pair { source, target }, provider } = provider_pair;
+				match operation {
+					Operation::Add => if exists_indicator.is_none() {
+						*exists_indicator = Some(());
+						event_payload.push((source, target, provider, operation));
+					},
+					Operation::Del => {
+						if exists_indicator.take().is_some() {
+							event_payload.push((source, target, provider, operation));
+						}
+					},
+				}
+			});
+		}
+
+		// only issue event if mods were made
+		if !event_payload.is_empty() {
+			Self::deposit_event(Event::MonitoredPairsSubmitted(event_payload));
+		}
+	}
+
 	/// Determine if can trigger OCW based on the next offchain trigger block delay mechanism
 	fn should_trigger_offchain(block_number: T::BlockNumber) -> bool {
 		match StorageValueRef::persistent(NEXT_OFFCHAIN_TRIGGER_BLOCK).get::<T::BlockNumber>() {
@@ -503,5 +503,14 @@ impl<T: Config> Pallet<T> {
 		}
 
 		Ok(())
+	}
+}
+
+impl<T: Config> BestPathTrait<T::Currency, T::Amount, T::Provider> for Pallet<T> {
+    fn submit_monitored_pairs(operations: Vec<ProviderPairOperation<T::Currency, T::Provider>>) {
+		Self::do_submit_monitored_pairs(operations);
+	}
+    fn get_price_path(source: T::Currency, target: T::Currency) -> Option<PricePath<T::Currency, T::Amount, T::Provider>> {
+		BestPaths::<T>::get(&source, &target) //Self::do_get_price_path(source, target)
 	}
 }

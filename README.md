@@ -23,19 +23,11 @@ This pallet comprises following structure:
   |
   +---- utils.rs
   |
-  +---- heap.rs
-  |
   +---- benchmarking.rs
   |
   +---- weights.rs
   |
-  +----+ best_path_calculator
-  |    |
-  |    +----- noop
-  |    |
-  |    +----- floyd_warshall
-  |
-  +----+ price_oracle
+  +----+ price_provider
        |
        +----- crypto_compare
 ```
@@ -43,12 +35,8 @@ This pallet comprises following structure:
 - [lib.rs](src/lib.rs) - OCW mechanisms and extrinsic APIs
 - [types.rs](src/types.rs) - types utilized throughout
 - [utils.rs](src/utils.rs) - common utils
-- [heap.rs](src/heap.rs) - heap implementation
 - [benchmarking.rs](src/benchmarking.rs) and [weights.rs](src/weights.rs) - weights produced by benchmarking
-- [best_path_calculator/floyd_warshall](best_path_calculator/floyd_warshall) - implementation of a shortest/longest path algorithm, comprising:
-  - Floyd-Warshall implementation as per https://www.youtube.com/watch?v=oNI0rf2P9gE&ab_channel=AbdulBari
-  - longest path implementation with weight multiplications, as per https://www.coursera.org/lecture/algorithms-on-graphs/currency-exchange-reduction-to-shortest-paths-cw8Tm
-- [price_oracle/crypto_compare] - price data oracle, as lifted from OCW example
+- [price_provider/crypto_compare] - price data oracle, based on OCW example
 
 ### Longest path algorithm
 
@@ -154,3 +142,9 @@ And validate new trading path for DOT-USDT pair:
 
 - Extrinsics with unbounded vector parameters need improved benchmarking, accounting for the length of the vector parameter
 - Benchmarking utilizes `--wasm-execution interpreted-i-know-what-i-do` as default `compiled` isn't available...
+
+## Substrate runtime wiring
+
+Runtime utilizing this pallet is exemplified in [substrate-node-playground](https://github.com/konrads/substrate-node-playground).
+
+License: Unlicense

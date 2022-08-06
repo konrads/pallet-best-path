@@ -129,7 +129,7 @@ impl Config for Test {
     type MaxTxPoolStayTime = MaxTxPoolStayTime;
     type UnsignedPriority = UnsignedPriority;
     type PriceChangeTolerance = PriceChangeTolerance;
-    type BestPathCalculator = best_path_calculator::noop_calculator::NoBestPathCalculator;
+    type BestPathCalculator = best_path::prelude::noop_calculator::NoBestPathCalculator;
     type PriceProvider = MockProvider;
     type Currency = Vec<u8>;
     type Provider = PriceProviderId;

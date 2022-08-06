@@ -1,3 +1,4 @@
+use sp_std::vec::Vec;
 use best_path::prelude::{Currency, Provider, Amount, PricePath};
 use crate::types::ProviderPairOperation;
 

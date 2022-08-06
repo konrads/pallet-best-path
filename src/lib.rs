@@ -70,7 +70,7 @@ pub enum PriceProviderId {
 }
 
 /// Implementor of price fetching mechanism, per provider
-pub trait PriceProvider<A: Amount, P: Eq> {
+pub trait PriceProviderHub<A: Amount, P: Eq> {
 	/// For a given provider, source & target currency, fetch the pair price
 	fn get_price<C: AsRef<[u8]>>(provider: &P, source: C, target: C) -> Result<A, PriceProviderErr>;
 }
@@ -201,8 +201,8 @@ pub mod pallet {
 		/// Dynamic implementation of the best path calculator
 		type BestPathCalculator: BestPathCalculator<Self::Currency, Self::Amount, Self::Provider>;
 
-		/// Dynamic implementation of the price oracle
-		type PriceProvider: PriceProvider<Self::Amount, Self::Provider>;
+		/// Dynamic implementation of the price oracle, per provider
+		type PriceProviderHub: PriceProviderHub<Self::Amount, Self::Provider>;
 
 		/// Benchmarking weight type
 		type WeightInfo: WeightInfo;
@@ -447,7 +447,7 @@ impl<T: Config> Pallet<T> {
 	fn fetch_prices_and_update_best_paths(block_number: T::BlockNumber) -> Result<(), String> {
 		let fetched_pairs = <MonitoredPairs<T>>::iter_keys()
 			.filter_map(|pp| {
-				T::PriceProvider::get_price(&pp.provider, &pp.pair.source, &pp.pair.target).ok().map(move |res| (pp, res))
+				T::PriceProviderHub::get_price(&pp.provider, &pp.pair.source, &pp.pair.target).ok().map(move |res| (pp, res))
 			})
 			.collect::<Vec<(_, _)>>();
 

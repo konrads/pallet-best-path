@@ -25,8 +25,8 @@ pub(crate) const BTC_CURRENCY: &[u8] = b"BTC";
 pub(crate) const ETH_CURRENCY: &[u8] = b"ETH";
 pub(crate) const USDT_CURRENCY: &[u8] = b"USDT";
 pub(crate) const BOGUS_CURRENCY: &[u8] = b"__BOGUS_CURRENCY__";
-pub struct MockProvider {}
-impl PriceProvider<u64, PriceProviderId> for MockProvider {
+pub struct MockProviderHub {}
+impl PriceProviderHub<u64, PriceProviderId> for MockProviderHub {
     fn get_price<C: AsRef<[u8]>>(
         _provider: &PriceProviderId,
         _source: C,
@@ -130,7 +130,7 @@ impl Config for Test {
     type UnsignedPriority = UnsignedPriority;
     type PriceChangeTolerance = PriceChangeTolerance;
     type BestPathCalculator = best_path::prelude::noop_calculator::NoBestPathCalculator;
-    type PriceProvider = MockProvider;
+    type PriceProviderHub = MockProviderHub;
     type Currency = Vec<u8>;
     type Provider = PriceProviderId;
     type Amount = u64;

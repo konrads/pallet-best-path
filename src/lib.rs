@@ -112,6 +112,7 @@ pub mod crypto {
 		MultiSignature, MultiSigner,
 	};
     use core::convert::TryFrom;
+	use scale_info::prelude::{string::String, format};
 	app_crypto!(sr25519, KEY_TYPE);
 
 	pub struct TestAuthId;

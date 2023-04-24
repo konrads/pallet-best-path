@@ -22,11 +22,15 @@ pub fn parse_price(price_str: &str, target_currency: &[u8], scale: u32) -> Optio
 	Some(price.integer as u128 * 10_u128.pow(scale) + (price.fraction as u128 * 10_u128.pow(scale-2) / 10_u128.pow(exp)) as u128)
 }
 
-/// Concat 4 &[u8]'s together
-/// 
-/// FIXME: add magic for varargs/method signature overwrite (1 concat function to take many params)
-pub fn concat4(bin1: &[u8], bin2: &[u8], bin3: &[u8], bin4: &[u8]) -> Vec<u8> {
-	bin1.iter().chain(bin2).chain(bin3).chain(bin4).copied().collect()
+/// Concat multiple &[u8]'s together
+pub fn concat(bins: &[&[u8]]) -> Vec<u8> {
+    let mut iter = bins.iter();
+    if let Some(&head) = iter.next() {
+        let char_iter: Box<dyn Iterator<Item = &u8>> = Box::new(head.iter());
+        iter.fold(char_iter, |x, &y| Box::new(x.chain(y))).copied().collect()
+    } else {
+        vec![]
+    }
 }
 
 /// Check if tolerance breaches the diff
@@ -45,10 +49,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_concat4() {
-        assert_eq!(b"".to_vec(),     concat4(b"", b"", b"", b""));
-        assert_eq!(b"1234".to_vec(), concat4(b"1", b"2", b"3", b"4"));
-        assert_eq!(b"14".to_vec(),   concat4(b"1", b"", b"", b"4"));
+    fn test_concat() {
+        assert_eq!(b"".to_vec(),     concat(&[b"", b"", b"", b""]));
+        assert_eq!(b"1234".to_vec(), concat(&[b"1", b"2", b"3", b"4"]));
+        assert_eq!(b"14".to_vec(),   concat(&[b"1", b"", b"", b"4"]));
     }
 
     #[test]

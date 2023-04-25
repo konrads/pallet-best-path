@@ -16,7 +16,6 @@ use sp_runtime::{
 	RuntimeDebug,
 };
 use sp_std::{
-	collections::btree_map::BTreeMap,
 	collections::btree_set::BTreeSet,
 	convert::TryInto,
 	iter::Iterator,
@@ -139,7 +138,7 @@ pub mod pallet {
 
 	/// DoubleMap of trading path by source & target currencies
 	#[pallet::storage]
-	pub(super) type BestPaths<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::Currency /* source currency */, Blake2_128Concat, T::Currency /*target currency */, PricePath<T::Currency, T::Amount, T::Provider> /* best path */>;
+	pub(super) type BestPaths<T: Config> = StorageDoubleMap<_, Blake2_128Concat, T::Currency /* source currency */, Blake2_128Concat, T::Currency /* target currency */, PricePath<T::Currency, T::Amount, T::Provider> /* best path */>;
 
 	/// Map to keep track of source & target currencies we wish to monitor
 	#[pallet::storage]
@@ -349,8 +348,8 @@ pub mod pallet {
 		fn validate_unsigned(_source: TransactionSource, call: &Self::Call) -> TransactionValidity {
 			// Firstly let's check that we call the right function.
 			if let Call::ocw_submit_best_paths_changes {
-				best_path_change_payload: ref payload,
-				ref signature,
+				best_path_change_payload: payload,
+				signature,
 			} = call
 			{
 				let signature_valid = SignedPayload::<T>::verify::<T::AuthorityId>(payload, signature.clone());
@@ -447,7 +446,7 @@ impl<T: Config> Pallet<T> {
 	fn fetch_prices_and_update_best_paths(block_number: T::BlockNumber) -> Result<(), String> {
 		let fetched_pairs = <MonitoredPairs<T>>::iter_keys()
 			.filter_map(|pp| {
-				T::PriceProviderHub::get_price(&pp.provider, &pp.pair.source, &pp.pair.target).ok().map(move |res| (pp, res))
+				T::PriceProviderHub::get_price(&pp.provider, &pp.pair.source, &pp.pair.target).ok().map(|res| (pp, res))
 			})
 			.collect::<Vec<(_, _)>>();
 
@@ -456,7 +455,7 @@ impl<T: Config> Pallet<T> {
 			return Ok(())
 		}
 
-		let new_best_paths: BTreeMap<Pair<_>, PricePath<_, _, _>> = T::BestPathCalculator::calc_best_paths(&fetched_pairs).map_err(|e| format!("Failed to calculate best prices due to {:?}", e))?;
+		let new_best_paths = T::BestPathCalculator::calc_best_paths(&fetched_pairs).map_err(|e| format!("Failed to calculate best prices due to {:?}", e))?;
 
 		// select the best path differences
 		// - elements changed at all and outside of acceptable tolerance
@@ -513,6 +512,6 @@ impl<T: Config> BestPathTrait<T::Currency, T::Amount, T::Provider> for Pallet<T>
 		Self::do_submit_monitored_pairs(operations);
 	}
     fn get_price_path(source: T::Currency, target: T::Currency) -> Option<PricePath<T::Currency, T::Amount, T::Provider>> {
-		BestPaths::<T>::get(&source, &target) //Self::do_get_price_path(source, target)
+		BestPaths::<T>::get(&source, &target)
 	}
 }

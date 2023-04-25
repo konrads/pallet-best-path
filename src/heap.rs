@@ -21,11 +21,7 @@ where E: Ord, E: Clone {
 impl <E> Heap<E> for BTreeSetHeap<E>
 where E: Ord, E: Clone {
     fn pop(&mut self) -> Option<E> {
-        let last = self.0.iter().next_back()?;
-        // FIXME: can avoid the clone???
-        let last = last.clone();
-        self.0.remove(&last);
-        Some(last)
+        self.0.pop_last()
     }
     
     fn push(&mut self, e: E) -> bool {

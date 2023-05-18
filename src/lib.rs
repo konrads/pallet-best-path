@@ -275,7 +275,7 @@ pub mod pallet {
 			_signature: T::Signature,
 		) -> DispatchResultWithPostInfo {
 			ensure_none(origin)?;
-			let current_nonce = <UnsignedTxNonce<T>>::get();
+			let current_nonce = UnsignedTxNonce::<T>::get();
 			ensure!(current_nonce == best_path_change_payload.nonce, Error::<T>::StaleUnsignedTxError);
 
 			let mut event_payload = vec![];
@@ -300,7 +300,7 @@ pub mod pallet {
 				);
 			}
 
-			<UnsignedTxNonce<T>>::set(current_nonce + 1);
+			UnsignedTxNonce::<T>::set(current_nonce + 1);
 			// only issue event if mods were made
 			if !event_payload.is_empty() {
 				Self::deposit_event(Event::BestPricesSubmitted(event_payload));
@@ -331,7 +331,7 @@ pub mod pallet {
 			ensure_root(origin)?;
 
 			Self::deposit_event(Event::WhitelistedOffchainAuthorityAdded(offchain_authority.clone()));
-			<WhitelistedOffchainAuthorities<T>>::insert(&offchain_authority, ());
+			WhitelistedOffchainAuthorities::<T>::insert(&offchain_authority, ());
 			Ok(())
 		}
 	}
@@ -358,7 +358,7 @@ pub mod pallet {
 					return InvalidTransaction::BadProof.into()
 				}
 
-				let current_block = <frame_system::Pallet<T>>::block_number();
+				let current_block = frame_system::Pallet::<T>::block_number();
 				if payload.block_number + T::MaxTxPoolStayTime::get() < current_block {
 					// transaction was in pool for too long
 					return InvalidTransaction::Stale.into();
@@ -398,7 +398,7 @@ impl<T: Config> Pallet<T> {
 		// add/delete monitored pairs
 		let mut event_payload = vec![];
 		for ProviderPairOperation{provider_pair, operation} in operations {
-			<MonitoredPairs<T>>::mutate_exists(provider_pair.clone(), |exists_indicator| {
+			MonitoredPairs::<T>::mutate_exists(provider_pair.clone(), |exists_indicator| {
 				let ProviderPair { pair: Pair { source, target }, provider } = provider_pair;
 				match operation {
 					Operation::Add => if exists_indicator.is_none() {
@@ -444,7 +444,7 @@ impl<T: Config> Pallet<T> {
 
 	/// A helper function to fetch the price, sign payload and send an unsigned transaction
 	fn fetch_prices_and_update_best_paths(block_number: T::BlockNumber) -> Result<(), String> {
-		let fetched_pairs = <MonitoredPairs<T>>::iter_keys()
+		let fetched_pairs = MonitoredPairs::<T>::iter_keys()
 			.filter_map(|pp| {
 				T::PriceProviderHub::get_price(&pp.provider, &pp.pair.source, &pp.pair.target).ok().map(|res| (pp, res))
 			})
@@ -463,7 +463,7 @@ impl<T: Config> Pallet<T> {
 		// - newly added elements
 		let mut changes = vec![];
 		let tolerance = T::PriceChangeTolerance::get();
-		for (source, target, old_price_path) in BestPaths::<T>::iter() {  // FIXME: iterating ovr *all* of BestPaths...
+		for (source, target, old_price_path) in BestPaths::<T>::iter() {  // FIXME: iterating over *all* of BestPaths...
 			let pair = Pair{ source: source.clone(), target: target.clone() };
 			match new_best_paths.get(&pair) {
 				Some(new_price_path) => {
@@ -491,7 +491,7 @@ impl<T: Config> Pallet<T> {
 		} else {
 			let (_, result) = Signer::<T, T::AuthorityId>::any_account()
 				.send_unsigned_transaction(
-					|account| BestPathChangesPayload {changes: changes.clone(), nonce: <UnsignedTxNonce<T>>::get(), block_number, public: account.public.clone() },
+					|account| BestPathChangesPayload {changes: changes.clone(), nonce: UnsignedTxNonce::<T>::get(), block_number, public: account.public.clone() },
 					|payload, signature| Call::ocw_submit_best_paths_changes {
 						best_path_change_payload: payload,
 						signature,

@@ -111,7 +111,7 @@ pub mod crypto {
 		traits::Verify,
 		MultiSignature, MultiSigner,
 	};
-    use core::convert::TryFrom;
+	use core::convert::TryFrom;
 	app_crypto!(sr25519, KEY_TYPE);
 
 	pub struct AuthId;

@@ -19,7 +19,7 @@ pub fn parse_price(price_str: &str, target_currency: &[u8], scale: u32) -> Optio
 	};
 
 	let exp = price.fraction_length.saturating_sub(2);
-	Some(price.integer as u128 * 10_u128.pow(scale) + (price.fraction as u128 * 10_u128.pow(scale-2) / 10_u128.pow(exp)) as u128)
+	Some(price.integer as u128 * 10_u128.pow(scale) + (price.fraction as u128 * 10_u128.pow(scale-2) / 10_u128.pow(exp)))
 }
 
 /// Concat multiple &[u8]'s together

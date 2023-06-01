@@ -121,14 +121,14 @@ And validate new trading path for DOT-USDT pair:
 
 ## Snags/TODOs
 
-| Stage | Description | Status |
-| --- | --- | --- |
-| 1 | Benchmark weights, including API allowing for extrinsics with vector parameters | [ ] |
-| 1 | Consider abstracting Cost (aka Amount) from Balance to allow for more elaborate cost calculations, including transaction fees, slippage, etc | [ ] |
-| 1 | Bootstrap storage to allow for configuration for price pairs per provider (currently needs root origin extrinsic invocations) | [ ] |
-| 1 | Investigate keys bootstrap (currently done with curl, see above) | [ ] |
-| 2 | Construct Typescript client lib | [ ] |
-| 3 | Revise mechanisms for submission of internal price data, ie. with what origin, signed/unsigned transaction, signed/unsigned payload, signed with a refund? | [ ] |
+| Stage | Description                                                                                                                                                | Status |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1     | Benchmark weights, including API allowing for extrinsics with vector parameters                                                                            | 𐄂      |
+| 1     | Consider abstracting Cost (aka Amount) from Balance to allow for more elaborate cost calculations, including transaction fees, slippage, etc               | 𐄂      |
+| 1     | Bootstrap storage to allow for configuration for price pairs per provider (currently needs root origin extrinsic invocations)                              | 𐄂      |
+| 1     | Investigate keys bootstrap (currently done with curl, see above)                                                                                           | 𐄂      |
+| 2     | Construct Typescript client lib                                                                                                                            | 𐄂      |
+| 3     | Revise mechanisms for submission of internal price data, ie. with what origin, signed/unsigned transaction, signed/unsigned payload, signed with a refund? | 𐄂      |
 
 ## Outstanding questions
 

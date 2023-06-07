@@ -36,7 +36,7 @@ This pallet comprises following structure:
 - [types.rs](src/types.rs) - types utilized throughout
 - [utils.rs](src/utils.rs) - common utils
 - [benchmarking.rs](src/benchmarking.rs) and [weights.rs](src/weights.rs) - weights produced by benchmarking
-- [price_provider]/(src/price_provider/crypto_compare.rs) - sample price data oracle, based on OCW example
+- [crypto-compare price provider](src/price_provider/crypto_compare.rs) - sample price data oracle, based on OCW example
 
 ### Longest path algorithm
 
